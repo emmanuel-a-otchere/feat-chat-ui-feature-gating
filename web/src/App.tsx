@@ -322,16 +322,32 @@ export default function App() {
   // the flag is off — see AnalyticsPage), but hiding the nav entry avoids
   // surfacing misleading token/cost numbers in the sidebar.  Default off.
   const [showTokenAnalytics, setShowTokenAnalytics] = useState(false);
+
+  // `dashboard.chat_ui` is the user-configureable master switch for the Chat
+  // tab.  Even when true, the tab is only shown if the server was started
+  // with --tui (embeddedChat).  Persisted to config.yaml.
+  const [chatUiEnabled, setChatUiEnabled] = useState(true);
+  const [chatSystemMonitorEnabled, setChatSystemMonitorEnabled] = useState(true);
+  const [chatByAgentProfileEnabled, setChatByAgentProfileEnabled] = useState(true);
+
   useEffect(() => {
     api
       .getConfig()
       .then((cfg) => {
         const dash = (cfg?.dashboard ?? {}) as {
           show_token_analytics?: unknown;
+          chat_ui?: unknown;
+          chat_system_monitor?: unknown;
+          chat_by_agent_profile?: unknown;
         };
         setShowTokenAnalytics(dash.show_token_analytics === true);
+        setChatUiEnabled(dash.chat_ui !== false); // default true
+        setChatSystemMonitorEnabled(dash.chat_system_monitor !== false); // default true
+        setChatByAgentProfileEnabled(dash.chat_by_agent_profile !== false); // default true
       })
-      .catch(() => setShowTokenAnalytics(false));
+      .catch(() => {
+        setShowTokenAnalytics(false);
+      });
   }, []);
 
   // A plugin can replace the built-in /chat page via `tab.override: "/chat"`
@@ -359,19 +375,19 @@ export default function App() {
   const builtinRoutes = useMemo(
     () => ({
       ...BUILTIN_ROUTES_CORE,
-      ...(embeddedChat ? { "/chat": ChatRouteSink } : {}),
+      ...(embeddedChat && chatUiEnabled ? { "/chat": ChatRouteSink } : {}),
     }),
-    [embeddedChat],
+    [embeddedChat, chatUiEnabled],
   );
 
   const builtinNav = useMemo(() => {
-    const base = embeddedChat
+    const base = embeddedChat && chatUiEnabled
       ? [CHAT_NAV_ITEM, ...BUILTIN_NAV_REST]
       : BUILTIN_NAV_REST;
     return showTokenAnalytics
       ? base
       : base.filter((n) => n.path !== "/analytics");
-  }, [embeddedChat, showTokenAnalytics]);
+  }, [embeddedChat, chatUiEnabled, showTokenAnalytics]);
 
   const sidebarNav = useMemo(
     () => partitionSidebarNav(builtinNav, manifests),
@@ -620,6 +636,7 @@ export default function App() {
                 </Routes>
 
                 {embeddedChat &&
+                  chatUiEnabled &&
                   !chatOverriddenByPlugin &&
                   (pluginsLoading ? (
                     isChatRoute ? (
@@ -643,7 +660,11 @@ export default function App() {
                       )}
                       aria-hidden={!isChatRoute}
                     >
-                      <ChatPage isActive={isChatRoute} />
+                      <ChatPage
+                        isActive={isChatRoute}
+                        chatSystemMonitor={chatSystemMonitorEnabled}
+                        chatByAgentProfile={chatByAgentProfileEnabled}
+                      />
                     </div>
                   ))}
               </div>

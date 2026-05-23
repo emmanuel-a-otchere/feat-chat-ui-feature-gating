@@ -26,6 +26,7 @@ import { Button } from "@nous-research/ui/ui/components/button";
 import { Typography } from "@/components/NouiTypography";
 import { HERMES_BASE_PATH } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { AgentMetricsBar } from "@/components/AgentMetricsBar";
 import { Copy, PanelRight, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -104,7 +105,15 @@ function terminalLineHeightForWidth(layoutWidthPx: number): number {
   return layoutWidthPx < 1024 ? 1.02 : 1.15;
 }
 
-export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
+export default function ChatPage({
+  isActive = true,
+  chatSystemMonitor = true,
+  chatByAgentProfile = true,
+}: {
+  isActive?: boolean;
+  chatSystemMonitor?: boolean;
+  chatByAgentProfile?: boolean;
+}) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
@@ -779,7 +788,7 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
               "border-t border-current/10",
             )}
           >
-            <ChatSidebar channel={channel} />
+            <ChatSidebar channel={channel} chatByAgentProfile={chatByAgentProfile} />
           </div>
         </div>
       </>,
@@ -808,6 +817,8 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
             boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
           }}
         >
+          <AgentMetricsBar visible={chatSystemMonitor && isActive} />
+
           <div
             ref={hostRef}
             className="hermes-chat-xterm-host min-h-0 min-w-0 flex-1"
@@ -847,7 +858,7 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
             className="flex min-h-0 shrink-0 flex-col overflow-hidden lg:h-full lg:w-80"
           >
             <div className="min-h-0 flex-1 overflow-hidden">
-              <ChatSidebar channel={channel} />
+              <ChatSidebar channel={channel} chatByAgentProfile={chatByAgentProfile} />
             </div>
           </div>
         )}
