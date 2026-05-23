@@ -322,14 +322,22 @@ export function ChatSidebar({
     [gw, sessionId],
   );
 
-  // When the user picks a new profile, call activateProfile then signal
+  // When the user picks a new profile, call activateProfile, re-fetch metrics
+  // from the server (authoritative under the new HERMES_HOME), then signal
   // parent to bump the channel key so the PTY respawns under the new profile.
   const handleProfileActivated = useCallback(
     (name: string) => {
       void api
         .activateProfile(name)
-        .then(() => {
-          setActiveProfile(name);
+        .then(() =>
+          // Re-fetch so activeProfile always reflects the server's actual
+          // active_profile — not the optimistic local guess.  This also
+          // covers the initial-load race where getAgentMetrics() resolves
+          // after the dialog has already opened.
+          api.getAgentMetrics(),
+        )
+        .then((metrics) => {
+          setActiveProfile(metrics.active_profile ?? name);
           // Signal parent to regenerate channel → new PTY with new HERMES_HOME
           onProfileActivated?.();
           setProfileOpen(false);
